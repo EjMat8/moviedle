@@ -11,6 +11,7 @@
     "dev:convex": "convex dev",
     "dev:activity": "npm --workspace activity run dev",
     "dev:tunnel": "cloudflared tunnel --url http://localhost:5173",
+    "build": "convex codegen --typecheck=disable && npm --workspace activity run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit && npm --workspace activity run typecheck"
