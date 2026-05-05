@@ -1,0 +1,185 @@
+@import "tailwindcss";
+
+@theme {
+  /* Bootleg-zine palette. Warm cream paper, warm near-black ink,
+     three risograph signal colors. Never #fff or #000. */
+  --color-paper: oklch(0.97 0.012 85);
+  --color-paper-deep: oklch(0.93 0.018 85);
+  --color-ink: oklch(0.18 0.015 80);
+  --color-ink-soft: oklch(0.42 0.015 80);
+  --color-ink-faint: oklch(0.5 0.015 80);
+
+  --color-pink: oklch(0.68 0.22 5);
+  --color-pink-soft: oklch(0.92 0.06 5);
+  --color-blue: oklch(0.56 0.22 250);
+  --color-blue-soft: oklch(0.92 0.06 250);
+  --color-yellow: oklch(0.93 0.18 100);
+
+  --font-display: "Boldonse", "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --ease-stamp: cubic-bezier(0.18, 0.9, 0.3, 1);
+}
+
+/* Photocopier grain. Subtle, layered, applied to surfaces that should
+   read as paper instead of pixels. The body-level overlay keeps the
+   ambient texture even where no card sits. */
+.grain {
+  position: relative;
+  isolation: isolate;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.32 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  z-index: 0;
+}
+.grain > * {
+  position: relative;
+  z-index: 1;
+}
+
+body {
+  background-color: var(--color-paper);
+  background-image:
+    radial-gradient(
+      circle at 20% 0%,
+      var(--color-pink-soft) 0%,
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 100% 100%,
+      var(--color-blue-soft) 0%,
+      transparent 42%
+    );
+  background-attachment: fixed;
+}
+
+/* Stamp-down: paper-stamp press for newly revealed hints. */
+@keyframes stamp-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1.04) rotate(var(--stamp-rot, 0deg));
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(0.985) rotate(var(--stamp-rot, 0deg));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(var(--stamp-rot, 0deg));
+  }
+}
+.anim-stamp-down {
+  animation: stamp-down 280ms var(--ease-stamp) both;
+}
+
+/* Paper-tear: lateral tear-shake on wrong guess. Replaces the old
+   neutral shake with something that fits the zine vocabulary. */
+@keyframes paper-tear {
+  0%, 100% {
+    transform: translateX(0) skewX(0deg);
+  }
+  20% {
+    transform: translateX(-7px) skewX(-1deg);
+  }
+  40% {
+    transform: translateX(6px) skewX(1.2deg);
+  }
+  60% {
+    transform: translateX(-4px) skewX(-0.6deg);
+  }
+  80% {
+    transform: translateX(3px) skewX(0.4deg);
+  }
+}
+.anim-tear {
+  animation: paper-tear 360ms ease-in-out both;
+}
+
+/* Stamp-arrival: the [SOLVED] / [BUSTED] rubber-stamp on result. */
+@keyframes stamp-slam {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.2) rotate(var(--stamp-angle, -8deg));
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.92) rotate(var(--stamp-angle, -8deg));
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(var(--stamp-angle, -8deg));
+  }
+}
+.anim-stamp-slam {
+  animation: stamp-slam 420ms var(--ease-stamp) both;
+}
+
+/* Sticker-peel: deflated loss-state corner peel. */
+@keyframes sticker-peel {
+  0% {
+    transform: rotate(var(--peel-rot, 0deg)) translateY(0);
+  }
+  100% {
+    transform: rotate(var(--peel-rot, 0deg)) translateY(0);
+  }
+}
+.anim-peel {
+  transform-origin: top right;
+}
+
+/* Marquee blink: the live countdown numerals pulse like a marquee bulb. */
+@keyframes marquee-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.anim-marquee {
+  animation: marquee-blink 1.6s ease-in-out infinite;
+}
+
+/* Confetti dots, repurposed from the old emerald palette into riso colors. */
+@keyframes confetti-burst {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: var(--confetti-end) scale(1);
+  }
+}
+.confetti-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  animation: confetti-burst 900ms ease-out both;
+  animation-delay: var(--confetti-delay, 0ms);
+}
+
+/* Reduced motion: respect the opt-out. */
+@media (prefers-reduced-motion: reduce) {
+  .anim-stamp-down,
+  .anim-tear,
+  .anim-stamp-slam,
+  .anim-marquee,
+  .confetti-dot {
+    animation: none !important;
+  }
+  body {
+    background-image: none;
+  }
+}
