@@ -634,7 +634,7 @@ function ActiveControls({
         onChange={(e) => setValue(e.target.value)}
         placeholder={
           challengeActive
-            ? "e.g. avengers 2 / dead man's chest"
+            ? "e.g. avengers 2 / age of ultron"
             : "e.g. everything everywhere all at once"
         }
         autoFocus
