@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   defaultThreshold,
+  findSequelNearMiss,
   fuzzyMatchTitle,
   levenshtein,
   normalizeTitle,
@@ -160,5 +161,48 @@ describe("fuzzyMatchTitle", () => {
       // so this still fails, but for the *threshold* reason, not the prefix guard.
       expect(fuzzyMatchTitle("matrix", "Matrix Reloaded", [])).toBe(false);
     });
+  });
+});
+
+describe("findSequelNearMiss", () => {
+  test("guess matches base of numbered canonical", () => {
+    const hit = findSequelNearMiss("Avengers", "Avengers 2", []);
+    expect(hit?.candidate).toBe("Avengers 2");
+    expect(hit?.digits).toBe("2");
+  });
+
+  test("guess matches base of numbered alias", () => {
+    const hit = findSequelNearMiss("Avengers", "Avengers: Age of Ultron", [
+      "Avengers 2",
+    ]);
+    expect(hit?.candidate).toBe("Avengers 2");
+    expect(hit?.digits).toBe("2");
+  });
+
+  test("typo within threshold still triggers near miss", () => {
+    const hit = findSequelNearMiss("Avengres", "Avengers 3", []);
+    expect(hit?.candidate).toBe("Avengers 3");
+  });
+
+  test("typing the sequel number when answer has none does NOT trigger", () => {
+    expect(findSequelNearMiss("Avengers 2", "Avengers", [])).toBeNull();
+  });
+
+  test("candidate without trailing digits does not trigger", () => {
+    expect(findSequelNearMiss("Matrix", "Matrix Reloaded", [])).toBeNull();
+  });
+
+  test("leading article on guess still resolves", () => {
+    const hit = findSequelNearMiss("The Avengers", "Avengers 2", []);
+    expect(hit?.candidate).toBe("Avengers 2");
+  });
+
+  test("empty guess returns null", () => {
+    expect(findSequelNearMiss("", "Avengers 2", [])).toBeNull();
+  });
+
+  test("multi-digit sequel number captured", () => {
+    const hit = findSequelNearMiss("Rocky", "Rocky 12", []);
+    expect(hit?.digits).toBe("12");
   });
 });

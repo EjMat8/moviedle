@@ -62,6 +62,44 @@ export type FuzzyMatchOpts = {
   threshold?: number;
 };
 
+// Splits a trailing digit run off a normalized title. Returns null when
+// the string is all digits or has no trailing digits — neither case is
+// meaningful for sequel-base matching.
+function stripTrailingDigits(s: string): { base: string; digits: string } | null {
+  const m = s.match(/^(.+?)(\d+)$/);
+  if (!m) return null;
+  return { base: m[1], digits: m[2] };
+}
+
+// Detect a "sequel near miss": the guess fuzzy-matches the *base* portion
+// of a numbered candidate (canonical or alias) — e.g. guess "Avengers"
+// vs candidate "Avengers 2". Only fires when the candidate has a trailing
+// digit run; typing the numbered sequel for a base title never triggers.
+// Caller should check this only when fuzzyMatchTitle already returned
+// false, so a real exact/typo match isn't shadowed by a sibling alias.
+export function findSequelNearMiss(
+  guess: string,
+  canonical: string,
+  aliases: string[] = [],
+): { candidate: string; digits: string } | null {
+  const ng = normalizeTitle(guess);
+  if (ng.length === 0) return null;
+
+  for (const cand of [canonical, ...aliases]) {
+    const nc = normalizeTitle(cand);
+    const stripped = stripTrailingDigits(nc);
+    if (!stripped) continue;
+    if (stripped.base.length === 0) continue;
+    const threshold = defaultThreshold(
+      Math.min(ng.length, stripped.base.length),
+    );
+    if (levenshtein(ng, stripped.base) <= threshold) {
+      return { candidate: cand, digits: stripped.digits };
+    }
+  }
+  return null;
+}
+
 export function fuzzyMatchTitle(
   guess: string,
   canonical: string,

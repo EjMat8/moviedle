@@ -74,6 +74,17 @@ export default defineSchema({
       ),
     ),
     completedAt: v.optional(v.number()),
+    // Sequel "near miss" free shot. Set when a guess matched the base of a
+    // numbered title (e.g. typed "Avengers" when answer is "Avengers 2").
+    // `used: false` means the next guess resolves the challenge without
+    // burning a hint up front. `used: true` means the one free shot is
+    // spent — subsequent near misses behave like normal wrongs.
+    sequelChallenge: v.optional(
+      v.object({
+        used: v.boolean(),
+        baseGuess: v.string(),
+      }),
+    ),
   })
     .index("by_user_date", ["userId", "puzzleDate"])
     .index("by_date", ["puzzleDate"])

@@ -5,7 +5,7 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
-import { fuzzyMatchTitle } from "./lib/fuzzyMatch";
+import { findSequelNearMiss, fuzzyMatchTitle } from "./lib/fuzzyMatch";
 import {
   MAX_HINTS,
   scoreForCorrectGuess,
@@ -198,6 +198,8 @@ export const submitGuess = mutation({
     );
 
     const newGrid: GridCell[] = [...attempt.grid];
+    const challengeActive =
+      attempt.sequelChallenge !== undefined && !attempt.sequelChallenge.used;
 
     if (matched) {
       newGrid[level - 1] = "correct";
@@ -223,6 +225,30 @@ export const submitGuess = mutation({
       return { status: "correct" as const, score, attempt: updated };
     }
 
+    // No match. If the player hasn't burned their sequel free-shot yet,
+    // check for a near miss (e.g. typed "Avengers" when answer is
+    // "Avengers 2") and offer a no-cost retry.
+    if (!challengeActive && attempt.sequelChallenge === undefined) {
+      const nearMiss = findSequelNearMiss(
+        args.guess,
+        puzzle.movieTitle,
+        puzzle.movieAliases,
+      );
+      if (nearMiss) {
+        await ctx.db.patch(attempt._id, {
+          sequelChallenge: { used: false, baseGuess: args.guess },
+        });
+        const updated = await ctx.db.get(attempt._id);
+        return { status: "sequel-challenge" as const, attempt: updated };
+      }
+    }
+
+    // Plain wrong path — also closes out an active challenge if there
+    // was one (the free shot is spent).
+    const burnedChallenge = challengeActive
+      ? { sequelChallenge: { ...attempt.sequelChallenge!, used: true } }
+      : {};
+
     newGrid[level - 1] = "wrong";
     if (level >= MAX_HINTS) {
       await ctx.db.patch(attempt._id, {
@@ -231,6 +257,7 @@ export const submitGuess = mutation({
         score: 0,
         grid: newGrid,
         completedAt: Date.now(),
+        ...burnedChallenge,
       });
       await recordCompletion(ctx, args.userId, args.username, date, 0, false);
       await ctx.scheduler.runAfter(0, internal.notifications.postPlayResult, {
@@ -249,6 +276,7 @@ export const submitGuess = mutation({
     await ctx.db.patch(attempt._id, {
       hintsRevealed: level + 1,
       grid: newGrid,
+      ...burnedChallenge,
     });
     const updated = await ctx.db.get(attempt._id);
     return { status: "wrong" as const, attempt: updated };

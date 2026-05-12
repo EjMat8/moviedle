@@ -186,6 +186,8 @@ function Game({
   const prevWrong = (attempt?.grid ?? []).filter((c) => c === "wrong").length;
   const revealedCount = attempt?.hintsRevealed ?? 1;
   const reelNumber = puzzle.date.replaceAll("-", "");
+  const sequelChallenge = attempt?.sequelChallenge;
+  const challengeActive = !!sequelChallenge && !sequelChallenge.used;
 
   return (
     <div className="space-y-6">
@@ -240,6 +242,8 @@ function Game({
             }
           }}
           prevWrong={prevWrong}
+          challengeActive={challengeActive}
+          challengeBaseGuess={sequelChallenge?.baseGuess ?? null}
         />
       )}
     </div>
@@ -572,6 +576,8 @@ function ActiveControls({
   onGuess,
   onReveal,
   prevWrong,
+  challengeActive,
+  challengeBaseGuess,
 }: {
   totalHints: number;
   hintsRevealed: number;
@@ -579,6 +585,8 @@ function ActiveControls({
   onGuess: (guess: string) => Promise<void>;
   onReveal: () => Promise<void>;
   prevWrong: number;
+  challengeActive: boolean;
+  challengeBaseGuess: string | null;
 }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -609,11 +617,14 @@ function ActiveControls({
       className={"space-y-3 " + (shakeKey > 0 ? "anim-tear" : "")}
       key={shakeKey}
     >
+      {challengeActive && (
+        <NearMissBanner baseGuess={challengeBaseGuess} />
+      )}
       <label
         htmlFor="moviedle-guess"
         className="block font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-ink-soft"
       >
-        WHICH MOVIE? TYPE IT.
+        {challengeActive ? "WHICH ONE IN THE SERIES?" : "WHICH MOVIE? TYPE IT."}
       </label>
       <input
         id="moviedle-guess"
@@ -621,7 +632,11 @@ function ActiveControls({
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="e.g. everything everywhere all at once"
+        placeholder={
+          challengeActive
+            ? "e.g. avengers 2"
+            : "e.g. everything everywhere all at once"
+        }
         autoFocus
         disabled={busy}
         autoComplete="off"
@@ -641,7 +656,11 @@ function ActiveControls({
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           }
         >
-          {busy ? "STAMPING…" : `GUESS · ${hintsRevealed}/${totalHints}`}
+          {busy
+            ? "STAMPING…"
+            : challengeActive
+              ? "LOCK IT IN"
+              : `GUESS · ${hintsRevealed}/${totalHints}`}
         </button>
         <button
           type="button"
@@ -665,14 +684,47 @@ function ActiveControls({
         </button>
       </div>
       <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-soft">
-        WRONG GUESSES BURN THE NEXT HINT TOO. 5 WRONG = BUSTED.
-        {prevWrong > 0 && (
+        {challengeActive
+          ? "MISS THIS ONE AND I BURN THE NEXT HINT."
+          : "WRONG GUESSES BURN THE NEXT HINT TOO. 5 WRONG = BUSTED."}
+        {prevWrong > 0 && !challengeActive && (
           <span className="ml-2 font-bold text-pink">
             {prevWrong} WRONG SO FAR.
           </span>
         )}
       </p>
     </form>
+  );
+}
+
+function NearMissBanner({ baseGuess }: { baseGuess: string | null }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="anim-stamp-down relative border-2 border-ink bg-yellow px-3 py-2 pr-4 shadow-[3px_3px_0_var(--color-ink)]"
+      style={{ ["--stamp-rot" as string]: "-0.6deg" }}
+    >
+      <span
+        className="absolute -top-2 left-3 inline-block border-2 border-ink bg-ink px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-paper"
+        style={{ transform: "rotate(-3deg)" }}
+      >
+        NEAR MISS
+      </span>
+      <p className="mt-2 text-sm font-medium leading-snug text-ink">
+        {baseGuess ? (
+          <>
+            you got <span className="font-bold">{baseGuess.toUpperCase()}</span>{" "}
+            — but which one?{" "}
+          </>
+        ) : (
+          <>you got the title — but which one in the series?{" "}</>
+        )}
+        <span className="font-mono text-[12px] text-ink-soft">
+          1, 2, 3…? free retry — miss and the hint burns.
+        </span>
+      </p>
+    </div>
   );
 }
 
