@@ -624,7 +624,7 @@ function ActiveControls({
         htmlFor="moviedle-guess"
         className="block font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-ink-soft"
       >
-        {challengeActive ? "WHICH ONE IN THE SERIES?" : "WHICH MOVIE? TYPE IT."}
+        {challengeActive ? "FULL TITLE — SEQUEL OR SUBTITLE." : "WHICH MOVIE? TYPE IT."}
       </label>
       <input
         id="moviedle-guess"
@@ -634,7 +634,7 @@ function ActiveControls({
         onChange={(e) => setValue(e.target.value)}
         placeholder={
           challengeActive
-            ? "e.g. avengers 2"
+            ? "e.g. avengers 2 / dead man's chest"
             : "e.g. everything everywhere all at once"
         }
         autoFocus
@@ -714,14 +714,16 @@ function NearMissBanner({ baseGuess }: { baseGuess: string | null }) {
       <p className="mt-2 text-sm font-medium leading-snug text-ink">
         {baseGuess ? (
           <>
-            you got <span className="font-bold">{baseGuess.toUpperCase()}</span>{" "}
-            — but which one?{" "}
+            you got the franchise —{" "}
+            <span className="font-bold">{baseGuess.toUpperCase()}</span> — but
+            which one?{" "}
           </>
         ) : (
-          <>you got the title — but which one in the series?{" "}</>
+          <>you got the franchise — but which one?{" "}</>
         )}
         <span className="font-mono text-[12px] text-ink-soft">
-          1, 2, 3…? free retry — miss and the hint burns.
+          type the full title (sequel number or subtitle). free retry — miss
+          and the hint burns.
         </span>
       </p>
     </div>

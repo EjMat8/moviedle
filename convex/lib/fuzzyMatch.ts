@@ -62,39 +62,55 @@ export type FuzzyMatchOpts = {
   threshold?: number;
 };
 
-// Splits a trailing digit run off a normalized title. Returns null when
-// the string is all digits or has no trailing digits — neither case is
-// meaningful for sequel-base matching.
-function stripTrailingDigits(s: string): { base: string; digits: string } | null {
-  const m = s.match(/^(.+?)(\d+)$/);
-  if (!m) return null;
-  return { base: m[1], digits: m[2] };
+// Extracts the "near miss base" from a candidate's original title. Two
+// patterns count as a franchise/extension split:
+//   - Subtitle after a colon: "Avengers: Endgame" → base "Avengers".
+//     Also handles "Pirates of the Caribbean: Dead Man's Chest".
+//   - Trailing digit run with a space: "Avengers 2" → base "Avengers".
+// Returns null when neither pattern is present — those candidates can't
+// produce a near miss because there's no natural franchise boundary.
+function extractNearMissBase(
+  candidate: string,
+): { base: string; subtitle: string } | null {
+  const colonIdx = candidate.indexOf(":");
+  if (colonIdx > 0) {
+    const base = candidate.slice(0, colonIdx).trim();
+    const subtitle = candidate.slice(colonIdx + 1).trim();
+    if (base.length > 0 && subtitle.length > 0) {
+      return { base, subtitle };
+    }
+  }
+  const trailingDigit = candidate.match(/^(.+?)\s+(\d+)\s*$/);
+  if (trailingDigit) {
+    const base = trailingDigit[1].trim();
+    if (base.length > 0) {
+      return { base, subtitle: trailingDigit[2] };
+    }
+  }
+  return null;
 }
 
-// Detect a "sequel near miss": the guess fuzzy-matches the *base* portion
-// of a numbered candidate (canonical or alias) — e.g. guess "Avengers"
-// vs candidate "Avengers 2". Only fires when the candidate has a trailing
-// digit run; typing the numbered sequel for a base title never triggers.
-// Caller should check this only when fuzzyMatchTitle already returned
-// false, so a real exact/typo match isn't shadowed by a sibling alias.
+// Detect a "near miss": the guess fuzzy-matches the *franchise base* of a
+// candidate (canonical or alias) — e.g. guess "Avengers" vs "Avengers 2",
+// or guess "Pirates of the Caribbean" vs "Pirates of the Caribbean: Dead
+// Man's Chest". Caller should check this only when fuzzyMatchTitle already
+// returned false, so a real match isn't shadowed by a sibling alias.
 export function findSequelNearMiss(
   guess: string,
   canonical: string,
   aliases: string[] = [],
-): { candidate: string; digits: string } | null {
+): { candidate: string; subtitle: string } | null {
   const ng = normalizeTitle(guess);
   if (ng.length === 0) return null;
 
   for (const cand of [canonical, ...aliases]) {
-    const nc = normalizeTitle(cand);
-    const stripped = stripTrailingDigits(nc);
-    if (!stripped) continue;
-    if (stripped.base.length === 0) continue;
-    const threshold = defaultThreshold(
-      Math.min(ng.length, stripped.base.length),
-    );
-    if (levenshtein(ng, stripped.base) <= threshold) {
-      return { candidate: cand, digits: stripped.digits };
+    const extracted = extractNearMissBase(cand);
+    if (!extracted) continue;
+    const nb = normalizeTitle(extracted.base);
+    if (nb.length === 0) continue;
+    const threshold = defaultThreshold(Math.min(ng.length, nb.length));
+    if (levenshtein(ng, nb) <= threshold) {
+      return { candidate: cand, subtitle: extracted.subtitle };
     }
   }
   return null;

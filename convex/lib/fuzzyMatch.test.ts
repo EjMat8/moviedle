@@ -168,15 +168,15 @@ describe("findSequelNearMiss", () => {
   test("guess matches base of numbered canonical", () => {
     const hit = findSequelNearMiss("Avengers", "Avengers 2", []);
     expect(hit?.candidate).toBe("Avengers 2");
-    expect(hit?.digits).toBe("2");
+    expect(hit?.subtitle).toBe("2");
   });
 
   test("guess matches base of numbered alias", () => {
-    const hit = findSequelNearMiss("Avengers", "Avengers: Age of Ultron", [
+    const hit = findSequelNearMiss("Avengers", "Some Other Title", [
       "Avengers 2",
     ]);
     expect(hit?.candidate).toBe("Avengers 2");
-    expect(hit?.digits).toBe("2");
+    expect(hit?.subtitle).toBe("2");
   });
 
   test("typo within threshold still triggers near miss", () => {
@@ -188,7 +188,7 @@ describe("findSequelNearMiss", () => {
     expect(findSequelNearMiss("Avengers 2", "Avengers", [])).toBeNull();
   });
 
-  test("candidate without trailing digits does not trigger", () => {
+  test("candidate without separator or trailing digits does not trigger", () => {
     expect(findSequelNearMiss("Matrix", "Matrix Reloaded", [])).toBeNull();
   });
 
@@ -203,6 +203,60 @@ describe("findSequelNearMiss", () => {
 
   test("multi-digit sequel number captured", () => {
     const hit = findSequelNearMiss("Rocky", "Rocky 12", []);
-    expect(hit?.digits).toBe("12");
+    expect(hit?.subtitle).toBe("12");
+  });
+
+  describe("colon-subtitle titles", () => {
+    test("guess matches franchise before colon", () => {
+      const hit = findSequelNearMiss(
+        "Pirates of the Caribbean",
+        "Pirates of the Caribbean: Dead Man's Chest",
+        [],
+      );
+      expect(hit?.candidate).toBe(
+        "Pirates of the Caribbean: Dead Man's Chest",
+      );
+      expect(hit?.subtitle).toBe("Dead Man's Chest");
+    });
+
+    test("short franchise before colon", () => {
+      const hit = findSequelNearMiss("Avengers", "Avengers: Endgame", []);
+      expect(hit?.subtitle).toBe("Endgame");
+    });
+
+    test("franchise with internal hyphen still resolves", () => {
+      const hit = findSequelNearMiss(
+        "Spider-Man",
+        "Spider-Man: No Way Home",
+        [],
+      );
+      expect(hit?.subtitle).toBe("No Way Home");
+    });
+
+    test("leading article on guess matches base after colon", () => {
+      const hit = findSequelNearMiss(
+        "The Lord of the Rings",
+        "The Lord of the Rings: The Two Towers",
+        [],
+      );
+      expect(hit?.candidate).toBe(
+        "The Lord of the Rings: The Two Towers",
+      );
+    });
+
+    test("typo on long franchise still resolves", () => {
+      const hit = findSequelNearMiss(
+        "Pirates of the Carribean",
+        "Pirates of the Caribbean: Dead Man's Chest",
+        [],
+      );
+      expect(hit?.candidate).toBe(
+        "Pirates of the Caribbean: Dead Man's Chest",
+      );
+    });
+
+    test("candidate with empty subtitle after colon is rejected", () => {
+      expect(findSequelNearMiss("Foo", "Foo:", [])).toBeNull();
+    });
   });
 });
